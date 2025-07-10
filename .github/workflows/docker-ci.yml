@@ -29,8 +29,7 @@ jobs:
         username: ubuntu
         key: ${{ secrets.EC2_KEY }}
         script: |
-            echo "${{ secrets.BACKEND_ENV }}" > backend.env
-            mv backend.env /home/ubuntu/backend.env
+            echo "${{ secrets.BACKEND_ENV }}" > /home/ubuntu/backend.env
 
     - name: Deploy frontend & backend containers
       uses: appleboy/ssh-action@v1.0.3
