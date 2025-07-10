@@ -1,0 +1,53 @@
+name: Build and Push Docker Image
+
+on:
+  push:
+    branches:
+      - main  # or 'dev' or any branch you want to trigger on
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Upload backend.env to EC2
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ubuntu
+        key: ${{ secrets.EC2_KEY }}
+        script: |
+            echo "${{ secrets.BACKEND_ENV }}" > backend.env
+            mv backend.env /home/ubuntu/backend.env
+
+    - name: Deploy frontend & backend containers
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ubuntu
+        key: ${{ secrets.EC2_KEY }}
+        script: |
+            docker pull chinonsonw/frontend:latest
+            docker pull chinonsonw/backend:latest
+
+            docker stop frontend-app || true && docker rm frontend-app || true
+            docker stop backend-app || true && docker rm backend-app || true
+
+            docker run -d -p 3000:3000 --name frontend-app chinonsonw/frontend:latest
+
+            docker run -d -p 3001:3001 \
+            --env-file /home/ubuntu/backend.env \
+            --name backend-app chinonsonw/backend:latest
+
