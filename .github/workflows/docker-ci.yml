@@ -30,23 +30,43 @@ jobs:
         key: ${{ secrets.EC2_KEY }}
         script: |
             echo "${{ secrets.BACKEND_ENV }}" > /home/ubuntu/backend.env
-
-    - name: Deploy frontend & backend containers
+     
+    - name: Install Docker on EC2 (if not already)
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.EC2_HOST }}
         username: ubuntu
         key: ${{ secrets.EC2_KEY }}
         script: |
-            docker pull chinonsonw/frontend:latest
-            docker pull chinonsonw/backend:latest
+            if ! command -v docker &> /dev/null
+            then
+                echo "Docker not found. Installing Docker..."
+                sudo apt update
+                sudo apt install docker.io -y
+                sudo systemctl start docker
+                sudo systemctl enable docker
+                sudo usermod -aG docker ubuntu
+                echo "Docker installed. Please reconnect SSH session if needed."
+            else
+                echo "Docker is already installed."
+            fi               
 
-            docker stop frontend-app || true && docker rm frontend-app || true
-            docker stop backend-app || true && docker rm backend-app || true
+    - name: Deploy frontend & backend containers
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+            host: ${{ secrets.EC2_HOST }}
+            username: ubuntu
+            key: ${{ secrets.EC2_KEY }}
+            script: |
+                docker pull chinonsonw/frontend:latest
+                docker pull chinonsonw/backend:latest
 
-            docker run -d -p 3000:3000 --name frontend-app chinonsonw/frontend:latest
+                docker stop frontend-app || true && docker rm frontend-app || true
+                docker stop backend-app || true && docker rm backend-app || true
 
-            docker run -d -p 3001:3001 \
-            --env-file /home/ubuntu/backend.env \
-            --name backend-app chinonsonw/backend:latest
+                docker run -d -p 3000:3000 --name frontend-app chinonsonw/frontend:latest
+
+                docker run -d -p 3001:3001 \
+                --env-file /home/ubuntu/backend.env \
+                --name backend-app chinonsonw/backend:latest
 
