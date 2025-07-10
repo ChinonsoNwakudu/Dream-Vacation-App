@@ -61,8 +61,8 @@ jobs:
                 docker pull chinonsonw/frontend:latest
                 docker pull chinonsonw/backend:latest
 
-                docker stop frontend-app || true && docker rm frontend-app || true
-                docker stop backend-app || true && docker rm backend-app || true
+                docker stop frontend-app || true && docker rm frontend || true
+                docker stop backend-app || true && docker rm backend || true
 
                 docker run -d -p 3000:3000 --name frontend-app chinonsonw/frontend:latest
 
